@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부서별 주간업무 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 10px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(30, 58, 95, 0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #4a90c2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .schedule-view-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .schedule-view-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-indicator.online {
+            background: rgba(72, 187, 120, 0.2);
+            border-color: rgba(72, 187, 120, 0.5);
+            color: #e6fffa;
+        }
+
+        .status-indicator.offline {
+            background: rgba(229, 62, 62, 0.2);
+            border-color: rgba(229, 62, 62, 0.5);
+            color: #fed7d7;
+        }
+
+        .controls {
+            background: #f8fafc;
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .week-selector {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .week-selector label {
+            display: block;
+            font-weight: 600;
+            font-size: 1em;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .week-selector select {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .week-selector select:focus {
+            outline: none;
+            border-color: #4a90c2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.1);
+        }
+
+        .input-controls {
+            display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(30, 58, 95, 0.06);
+            margin-top: 15px;
+        }
+
+        .input-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .input-field {
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4a90c2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.1);
+        }
+
+        .add-btn {
+            grid-column: 1 / -1;
+            background: #4a90c2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .add-btn:hover {
+            background: #3a7ca8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 144, 194, 0.25);
+        }
+
+        .add-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .main-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .main-content.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #1e3a5f;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4a90c2;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        /* 부서별 테이블 스타일 */
+        .dept-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 4px 16px rgba(30, 58, 95, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .dept-table th {
+            background: #1e3a5f;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .dept-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .dept-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .dept-name {
+            background: #f0f7ff !important;
+            font-weight: 600;
+            color: #1e3a5f;
+            min-width: 100px;
+            font-size: 11px;
+        }
+
+        .task-content {
+            text-align: left;
+            font-size: 12px;
+            color: #2d3748;
+            min-height: 20px;
+            padding: 6px;
+        }
+
+        .task-item {
+            background: #fff8e1;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin: 3px 0;
+            border-left: 3px solid #4a90c2;
+            font-size: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .task-item:hover {
+            background: #fff4db;
+            transform: scale(1.02);
+        }
+
+        .task-item .delete-task-btn {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            background: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .task-item .delete-task-btn:hover {
+            opacity: 1;
+        }
+
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            transform: scale(1.1);
+            accent-color: #4a90c2;
+        }
+
+        /* 시간표 스타일 - 모바일 최적화 */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 4px 16px rgba(30, 58, 95, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            table-layout: fixed;
+        }
+
+        .schedule-table th {
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+        }
+
+        .date-header {
+            background: #4a90c2;
+            font-size: 11px;
+            width: 17.6%;
+        }
+
+        .day-header {
+            background: #1e3a5f;
+            font-size: 10px;
+            width: 17.6%;
+        }
+
+        .time-header {
+            background: #f0f7ff;
+            color: #1e3a5f !important;
+            font-weight: 600;
+            width: 12%;
+            font-size: 8px;
+            padding: 6px 2px;
+        }
+
+        .schedule-cell {
+            border: 1px solid #e2e8f0;
+            padding: 4px;
+            vertical-align: top;
+            height: 55px;
+            background: white;
+            position: relative;
+            width: 17.6%;
+            overflow: hidden;
+        }
+
+        .schedule-item {
+            background: #f0f7ff;
+            border-radius: 3px;
+            padding: 3px;
+            margin-bottom: 2px;
+            font-size: 8px;
+            line-height: 1.1;
+            box-shadow: 0 1px 2px rgba(30, 58, 95, 0.05);
+            border-left: 2px solid #4a90c2;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .schedule-item:hover {
+            background: #e6f3ff;
+            transform: scale(1.02);
+            box-shadow: 0 2px 4px rgba(30, 58, 95, 0.15);
+        }
+
+        .schedule-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .schedule-delete-btn {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            background: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            font-size: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: all 0.2s;
+        }
+
+        .schedule-delete-btn:hover {
+            opacity: 1;
+        }
+
+        .dept-name-schedule {
+            font-weight: 600;
+            color: #1e3a5f;
+            margin-bottom: 1px;
+            font-size: 7px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-name-schedule {
+            color: #2d3748;
+            font-size: 7px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .separator {
+            border-top: 1px dashed #cbd5e0;
+            margin: 3px 0;
+        }
+
+        /* 모달 팝업 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.2s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            margin-top: -5px;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e3a5f;
+            margin: 0;
+        }
+
+        .modal-body {
+            line-height: 1.5;
+        }
+
+        .modal-info {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+            border-left: 3px solid #4a90c2;
+        }
+
+        .modal-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 13px;
+        }
+
+        .modal-value {
+            color: #2d3748;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        /* 성공/에러 메시지 */
+        .message {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .success-message {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #fc8181;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* 모바일 반응형 디자인 */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                border-radius: 8px;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.1em;
+            }
+
+            .status-indicator, .schedule-view-btn {
+                position: static;
+                margin: 8px auto 5px;
+                display: block;
+                width: fit-content;
+            }
+
+            .schedule-view-btn {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+
+            .input-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .dept-table, .schedule-table {
+                font-size: 10px;
+            }
+
+            .dept-table th, .dept-table td {
+                padding: 6px 4px;
+            }
+
+            .dept-name {
+                min-width: 80px;
+                font-size: 9px;
+            }
+
+            .task-content {
+                font-size: 10px;
+                padding: 4px;
+            }
+
+            .task-item {
+                font-size: 9px;
+                padding: 4px 6px;
+                margin: 2px 0;
+            }
+
+            .schedule-table th {
+                padding: 6px 2px;
+            }
+
+            .date-header {
+                font-size: 9px;
+            }
+
+            .day-header {
+                font-size: 8px;
+            }
+
+            .time-header {
+                font-size: 7px;
+                padding: 4px 1px;
+            }
+
+            .schedule-cell {
+                padding: 2px;
+                height: 45px;
+            }
+
+            .schedule-item {
+                font-size: 7px;
+                padding: 2px;
+                margin-bottom: 1px;
+            }
+
+            .dept-name-schedule {
+                font-size: 6px;
+            }
+
+            .task-name-schedule {
+                font-size: 6px;
+            }
+
+            .schedule-delete-btn {
+                width: 12px;
+                height: 12px;
+                font-size: 7px;
+            }
+
+            .modal-content {
+                margin: 5% auto;
+                padding: 15px;
+                width: 95%;
+            }
+
+            .modal-title {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="status-indicator" id="statusIndicator">●</div>
+            <a class='schedule-view-btn' href='/schedule.html' target='_blank'>📊 학교일정 조회</a>
+            <h1>📅 부서별 주간업무 관리 시스템</h1>
+        </div>
+
+        <div class="controls">
+            <!-- 주차 선택 -->
+            <div class="week-selector">
+                <label for="weekSelect">📆 주차 선택</label>
+                <select id="weekSelect">
+                    <option value="">주차를 선택하세요...</option>
+                </select>
+            </div>
+
+            <!-- 업무 입력 컨트롤 -->
+            <div class="input-controls" id="inputControls">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>부서</label>
+                        <select id="deptSelect" class="input-field">
+                            <option value="">부서 선택</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>업무내용</label>
+                        <input type="text" id="taskInput" class="input-field" placeholder="업무내용 입력">
+                    </div>
+                    <div class="input-group">
+                        <label>담당자</label>
+                        <input type="text" id="personInput" class="input-field" placeholder="담당자">
+                    </div>
+                    <div class="input-group">
+                        <label>날짜</label>
+                        <input type="date" id="dateInput" class="input-field">
+                    </div>
+                    <div class="input-group">
+                        <label>시간</label>
+                        <select id="timeSelect" class="input-field">
+                            <option value="">시간 선택</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>장소</label>
+                        <input type="text" id="locationInput" class="input-field" placeholder="장소">
+                    </div>
+                </div>
+                <button class="add-btn" id="addBtn" onclick="addTask()">등록</button>
+            </div>
+        </div>
+
+        <div id="mainContent" class="main-content">
+            <div class="success-message message" id="successMessage">
+                ✅ 데이터가 성공적으로 저장되었습니다!
+            </div>
+            
+            <div class="error-message message" id="errorMessage">
+                ❌ 오류가 발생했습니다. 다시 시도해주세요.
+            </div>
+
+            <!-- 부서별 업무 테이블 -->
+            <div class="section">
+                <h2>📝 부서별 업무 현황</h2>
+                <table class="dept-table" id="deptTable">
+                    <thead>
+                        <tr>
+                            <th>부서명</th>
+                            <th>업무내용</th>
+                            <th>담당자</th>
+                            <th>날짜</th>
+                            <th>시간</th>
+                            <th>장소</th>
+                            <th>시간표반영</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deptTableBody">
+                        <!-- 동적으로 생성됨 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 주간 시간표 -->
+            <div class="section">
+                <h2>📊 주간 시간표</h2>
+                <table class="schedule-table" id="scheduleTable">
+                    <thead>
+                        <tr id="dateRow">
+                            <th class="time-header">날짜</th>
+                            <th class="date-header">08/11</th>
+                            <th class="date-header">08/12</th>
+                            <th class="date-header">08/13</th>
+                            <th class="date-header">08/14</th>
+                            <th class="date-header">08/15</th>
+                        </tr>
+                        <tr>
+                            <th class="time-header">시간</th>
+                            <th class="day-header">월</th>
+                            <th class="day-header">화</th>
+                            <th class="day-header">수</th>
+                            <th class="day-header">목</th>
+                            <th class="day-header">금</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <!-- 동적으로 생성됨 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 팝업 -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2 class="modal-title" id="modalTitle">업무 상세 정보</h2>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 동적으로 생성됨 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzX0LiFfj539aDKWhTLlXivnLjZdAce6lhxZEEaK7et_rsp6L0MIAKVs_hPtdRkFipV/exec';
+        let allData = [];
+        let currentWeekData = {};
+        let isOnline = false;
+
+        // 부서 목록
+        const departments = [
+            "교무기획부", "교육과정부", "교육연구부", "체육예술건강교육부",
+            "진로진학상담부", "방과후자공고부", "학생생활안전부", "교육정보부",
+            "인문사회교육부", "과학중점교육부", "1학년부", "2학년부", "3학년부"
+        ];
+
+        // 시간대 목록
+        const timeSlots = [
+            '조회 (08:30-08:40)', '1교시 (08:40-09:30)', '2교시 (09:40-10:30)',
+            '3교시 (10:40-11:30)', '4교시 (11:40-12:30)', '점심 (12:30-13:30)',
+            '5교시 (13:30-14:20)', '6교시 (14:30-15:20)', '7교시 (15:30-16:20)',
+            '청소 (16:20-16:40)'
+        ];
+
+        const timeOptions = ['조회', '1교시', '2교시', '3교시', '4교시', '점심', '5교시', '6교시', '7교시', '청소'];
+        const timeSlotLabels = ['조회', '1교시', '2교시', '3교시', '4교시', '점심', '5교시', '6교시', '7교시', '청소'];
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('페이지 초기화 시작');
+            generateWeekOptions();
+            setupDepartmentSelect();
+            setupTimeSelect();
+            setupEventListeners();
+            setupModalEvents();
+            loadDataFromSheet();
+        });
+
+        // 주차 옵션 생성 (직접 정의)
+        function generateWeekOptions() {
+            const select = document.getElementById('weekSelect');
+            console.log('주차 옵션 생성 시작');
+            
+            // 2025년 8월 11일부터 시작하는 주차들 직접 정의
+            const weekData = [
+                '08/11 ~ 08/15', '08/18 ~ 08/22', '08/25 ~ 08/29',
+                '09/01 ~ 09/05', '09/08 ~ 09/12', '09/15 ~ 09/19', '09/22 ~ 09/26', '09/29 ~ 10/03',
+                '10/06 ~ 10/10', '10/13 ~ 10/17', '10/20 ~ 10/24', '10/27 ~ 10/31',
+                '11/03 ~ 11/07', '11/10 ~ 11/14', '11/17 ~ 11/21', '11/24 ~ 11/28',
+                '12/01 ~ 12/05', '12/08 ~ 12/12', '12/15 ~ 12/19', '12/22 ~ 12/26', '12/29 ~ 01/02',
+                '01/05 ~ 01/09', '01/12 ~ 01/16', '01/19 ~ 01/23', '01/26 ~ 01/30',
+                '02/02 ~ 02/06', '02/09 ~ 02/13', '02/16 ~ 02/20', '02/23 ~ 02/27'
+            ];
+            
+            weekData.forEach((weekStr, index) => {
+                const option = document.createElement('option');
+                option.value = weekStr;
+                option.textContent = weekStr;
+                select.appendChild(option);
+                console.log(`주차 ${index + 1} 추가: ${weekStr}`);
+            });
+            
+            console.log(`총 ${weekData.length}개 주차 생성 완료`);
+            
+            // 주차 생성 후 현재 주차 자동 선택
+            setTimeout(() => {
+                setCurrentWeek();
+            }, 100);
+        }
+
+        // 오늘 날짜에 해당하는 주차 자동 선택
+        function setCurrentWeek() {
+            const today = new Date();
+            const weekSelect = document.getElementById('weekSelect');
+            
+            console.log('현재 날짜 기준 주차 찾기:', today.toLocaleDateString());
+            
+            // 모든 주차 옵션을 확인하여 오늘 날짜가 포함된 주차 찾기
+            for (let i = 1; i < weekSelect.options.length; i++) {
+                const weekOption = weekSelect.options[i];
+                const weekStr = weekOption.value;
+                
+                if (isDateInWeek(today, weekStr)) {
+                    console.log('현재 주차 찾음:', weekStr);
+                    weekSelect.value = weekStr;
+                    
+                    // 주차가 선택되었으므로 관련 UI 업데이트
+                    document.getElementById('inputControls').style.display = 'block';
+                    document.getElementById('mainContent').classList.add('active');
+                    
+                    // 데이터가 로드되면 주차 데이터 표시
+                    if (allData.length > 0) {
+                        loadWeekData(weekStr);
+                    }
+                    
+                    return;
+                }
+            }
+            
+            console.log('현재 날짜에 해당하는 주차를 찾을 수 없음');
+        }
+
+        // 특정 날짜가 주차에 포함되는지 확인
+        function isDateInWeek(date, weekStr) {
+            try {
+                const parts = weekStr.split(' ~ ');
+                const startStr = parts[0];
+                const endStr = parts[1];
+                
+                // 월/일 파싱
+                const [startMonth, startDay] = startStr.split('/').map(Number);
+                const [endMonth, endDay] = endStr.split('/').map(Number);
+                
+                // 현재 날짜의 월/일
+                const currentMonth = date.getMonth() + 1;
+                const currentDay = date.getDate();
+                
+                console.log('날짜 비교:', {
+                    weekStr,
+                    current: `${currentMonth}/${currentDay}`,
+                    start: `${startMonth}/${startDay}`,
+                    end: `${endMonth}/${endDay}`
+                });
+                
+                // 년도 경계를 고려한 비교
+                if (endMonth < startMonth) {
+                    // 년도가 바뀌는 경우 (12월 말 ~ 1월 초)
+                    return (currentMonth === startMonth && currentDay >= startDay) ||
+                           (currentMonth > startMonth) ||
+                           (currentMonth < startMonth && currentMonth === endMonth && currentDay <= endDay) ||
+                           (currentMonth < startMonth && currentMonth < endMonth);
+                } else {
+                    // 같은 년도 내의 경우
+                    return (currentMonth > startMonth || (currentMonth === startMonth && currentDay >= startDay)) &&
+                           (currentMonth < endMonth || (currentMonth === endMonth && currentDay <= endDay));
+                }
+                
+            } catch (error) {
+                console.error('날짜 비교 오류:', error);
+                return false;
+            }
+        }
+
+        // 모달 이벤트 설정
+        function setupModalEvents() {
+            const modal = document.getElementById('taskModal');
+            const closeBtn = document.querySelector('.close');
+
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+
+        // 업무 상세 팝업 표시
+        function showTaskModal(task) {
+            const modal = document.getElementById('taskModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = task.task || '업무 정보';
+
+            let bodyHTML = '';
+            
+            bodyHTML += `<div class="modal-info">
+                <div class="modal-label">부서</div>
+                <div class="modal-value">${task.department}</div>
+            </div>`;
+
+            if (task.person) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">담당자</div>
+                    <div class="modal-value">${task.person}</div>
+                </div>`;
+            }
+
+            if (task.location) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">장소</div>
+                    <div class="modal-value">${task.location}</div>
+                </div>`;
+            }
+
+            if (task.time) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">시간</div>
+                    <div class="modal-value">${task.time}</div>
+                </div>`;
+            }
+
+            if (task.date) {
+                const taskDate = new Date(task.date);
+                const dateString = taskDate.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                });
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">날짜</div>
+                    <div class="modal-value">${dateString}</div>
+                </div>`;
+            }
+
+            bodyHTML += `<div class="modal-info">
+                <div class="modal-label">시간표 반영</div>
+                <div class="modal-value">${task.checked ? '✅ 반영됨' : '❌ 미반영'}</div>
+            </div>`;
+
+            modalBody.innerHTML = bodyHTML;
+            modal.style.display = 'block';
+        }
+
+        // Google Sheets에서 데이터 로드
+        async function loadDataFromSheet() {
+            try {
+                setLoading(true);
+                console.log('데이터 로드 시작:', API_URL);
+                
+                const response = await fetch(`${API_URL}?action=getData`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('받은 데이터:', data);
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                allData = Array.isArray(data) ? data : [];
+                setOnlineStatus(true);
+                
+                const selectedWeek = document.getElementById('weekSelect').value;
+                if (selectedWeek) {
+                    loadWeekData(selectedWeek);
+                } else {
+                    // 데이터 로드 완료 후 현재 주차 다시 시도
+                    setCurrentWeek();
+                }
+                
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+                setOnlineStatus(false);
+                showErrorMessage('데이터를 불러오는 중 오류가 발생했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Google Sheets에 데이터 저장
+        async function saveDataToSheet(taskData) {
+            try {
+                console.log('저장할 데이터:', taskData);
+                
+                // 첫 번째 시도: URLSearchParams 방식
+                let response, result;
+                try {
+                    const params = new URLSearchParams({
+                        action: 'saveData',
+                        week: taskData.week,
+                        department: taskData.department,
+                        task: taskData.task,
+                        person: taskData.person || '',
+                        date: taskData.date || '',
+                        time: taskData.time || '',
+                        location: taskData.location || '',
+                        checked: taskData.checked || false
+                    });
+
+                    console.log('요청 URL:', `${API_URL}?${params}`);
+                    response = await fetch(`${API_URL}?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    console.log('응답 상태:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const responseText = await response.text();
+                    console.log('원시 응답:', responseText);
+                    
+                    result = JSON.parse(responseText);
+                    
+                } catch (fetchError) {
+                    console.log('첫 번째 시도 실패, POST 방식 시도:', fetchError.message);
+                    
+                    // 두 번째 시도: POST 방식
+                    const formData = new FormData();
+                    formData.append('action', 'saveData');
+                    formData.append('week', taskData.week);
+                    formData.append('department', taskData.department);
+                    formData.append('task', taskData.task);
+                    formData.append('person', taskData.person || '');
+                    formData.append('date', taskData.date || '');
+                    formData.append('time', taskData.time || '');
+                    formData.append('location', taskData.location || '');
+                    formData.append('checked', taskData.checked || false);
+                    
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    result = await response.json();
+                }
+                
+                console.log('저장 결과:', result);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                return result.success || true;
+            } catch (error) {
+                console.error('데이터 저장 오류 상세:', error);
+                throw error;
+            }
+        }
+
+        // Google Sheets에서 데이터 삭제
+        async function deleteDataFromSheet(id) {
+            try {
+                console.log('삭제할 ID:', id);
+                
+                const params = new URLSearchParams({
+                    action: 'deleteData',
+                    id: id
+                });
+
+                console.log('삭제 요청 URL:', `${API_URL}?${params}`);
+                const response = await fetch(`${API_URL}?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('삭제 응답:', responseText);
+                
+                const result = JSON.parse(responseText);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                return result.success || true;
+            } catch (error) {
+                console.error('데이터 삭제 오류 상세:', error);
+                throw error;
+            }
+        }
+
+        // Google Sheets에서 데이터 업데이트
+        async function updateDataInSheet(id, taskData) {
+            try {
+                console.log('업데이트할 데이터:', { id, taskData });
+                
+                const params = new URLSearchParams({
+                    action: 'updateData',
+                    id: id,
+                    week: taskData.week,
+                    department: taskData.department,
+                    task: taskData.task,
+                    person: taskData.person || '',
+                    date: taskData.date || '',
+                    time: taskData.time || '',
+                    location: taskData.location || '',
+                    checked: taskData.checked || false
+                });
+
+                console.log('업데이트 요청 URL:', `${API_URL}?${params}`);
+                const response = await fetch(`${API_URL}?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('업데이트 응답:', responseText);
+                
+                const result = JSON.parse(responseText);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                return result.success || true;
+            } catch (error) {
+                console.error('데이터 업데이트 오류 상세:', error);
+                throw error;
+            }
+        }
+
+        // 온라인 상태 설정
+        function setOnlineStatus(online) {
+            isOnline = online;
+            const indicator = document.getElementById('statusIndicator');
+            
+            if (online) {
+                indicator.textContent = '●';
+                indicator.className = 'status-indicator online';
+                indicator.title = '온라인 - Google Sheets 연결됨';
+            } else {
+                indicator.textContent = '●';
+                indicator.className = 'status-indicator offline';
+                indicator.title = '오프라인 - 연결 실패';
+            }
+        }
+
+        // 로딩 상태 설정
+        function setLoading(loading) {
+            const container = document.querySelector('.container');
+            const addBtn = document.getElementById('addBtn');
+            
+            if (loading) {
+                container.classList.add('loading');
+                addBtn.disabled = true;
+            } else {
+                container.classList.remove('loading');
+                addBtn.disabled = false;
+            }
+        }
+
+        // 부서 선택 옵션 설정
+        function setupDepartmentSelect() {
+            const select = document.getElementById('deptSelect');
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                select.appendChild(option);
+            });
+        }
+
+        // 시간 선택 옵션 설정
+        function setupTimeSelect() {
+            const select = document.getElementById('timeSelect');
+            timeOptions.forEach(time => {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time;
+                select.appendChild(option);
+            });
+        }
+
+        function formatDate(date) {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}/${day}`;
+        }
+
+        // 날짜 표시 형식 변환 (월/일만)
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            
+            try {
+                let date;
+                if (dateStr.includes('T')) {
+                    date = new Date(dateStr);
+                } else {
+                    date = new Date(dateStr + 'T00:00:00');
+                }
+                
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return `${month}/${day}`;
+            } catch (error) {
+                return dateStr;
+            }
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            document.getElementById('weekSelect').addEventListener('change', function() {
+                const selectedWeek = this.value;
+                if (selectedWeek) {
+                    loadWeekData(selectedWeek);
+                    document.getElementById('inputControls').style.display = 'block';
+                    document.getElementById('mainContent').classList.add('active');
+                } else {
+                    document.getElementById('inputControls').style.display = 'none';
+                    document.getElementById('mainContent').classList.remove('active');
+                }
+            });
+        }
+
+        // 주차 데이터 로드
+        function loadWeekData(weekStr) {
+            currentWeekData = {
+                week: weekStr,
+                tasks: allData.filter(item => item.week === weekStr)
+            };
+            
+            updateDateHeaders(weekStr);
+            generateDeptTable();
+            generateScheduleTable();
+            updateScheduleDisplay();
+        }
+
+        // 날짜 헤더 업데이트
+        function updateDateHeaders(weekStr) {
+            const dates = parseWeekDates(weekStr);
+            const dateRow = document.getElementById('dateRow');
+            const dateCells = dateRow.querySelectorAll('.date-header');
+            
+            for (let i = 0; i < 5; i++) {
+                const date = new Date(dates.start);
+                date.setDate(dates.start.getDate() + i);
+                const dateStr = formatDate(date);
+                dateCells[i].textContent = dateStr;
+            }
+        }
+
+        function parseWeekDates(weekStr) {
+            try {
+                const parts = weekStr.split(' ~ ');
+                const startStr = parts[0];
+                const endStr = parts[1];
+                
+                const startMonth = parseInt(startStr.split('/')[0]);
+                const startDay = parseInt(startStr.split('/')[1]);
+                const endMonth = parseInt(endStr.split('/')[0]);
+                const endDay = parseInt(endStr.split('/')[1]);
+                
+                // 년도 계산: 8월부터 시작하므로 8월~12월은 2025년, 1월~7월은 2026년
+                const startYear = startMonth >= 8 ? 2025 : 2026;
+                const endYear = endMonth >= 8 ? 2025 : 2026;
+                
+                const startDate = new Date(startYear, startMonth - 1, startDay);
+                const endDate = new Date(endYear, endMonth - 1, endDay);
+                
+                return { start: startDate, end: endDate };
+            } catch (error) {
+                console.error('날짜 파싱 오류:', error, weekStr);
+                return { start: new Date(), end: new Date() };
+            }
+        }
+
+        // 부서별 테이블 생성
+        function generateDeptTable() {
+            const tbody = document.getElementById('deptTableBody');
+            tbody.innerHTML = '';
+
+            departments.forEach(dept => {
+                const row = document.createElement('tr');
+                
+                const deptTasks = currentWeekData.tasks.filter(task => task.department === dept);
+                
+                row.innerHTML = `
+                    <td class="dept-name">${dept}</td>
+                    <td class="task-content">
+                        ${deptTasks.map((task, index) => 
+                            `<div class="task-item" onclick="showTaskModal(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+                                ${task.task || ''}
+                                <button class="delete-task-btn" onclick="event.stopPropagation(); deleteTask(${task.id})" title="삭제">×</button>
+                            </div>`
+                        ).join('')}
+                    </td>
+                    <td>${deptTasks.map(task => task.person || '').filter(p => p).join(', ')}</td>
+                    <td>${deptTasks.map(task => task.date ? formatDisplayDate(task.date) : '').filter(d => d).join(', ')}</td>
+                    <td>${deptTasks.map(task => task.time || '').filter(t => t).join(', ')}</td>
+                    <td>${deptTasks.map(task => task.location || '').filter(l => l).join(', ')}</td>
+                    <td>
+                        ${deptTasks.map((task) => 
+                            `<input type="checkbox" class="custom-checkbox" ${task.checked ? 'checked' : ''} 
+                                   onchange="toggleTask(${task.id}, this.checked)">`
+                        ).join('<br>')}
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // 업무 추가
+        async function addTask() {
+            const dept = document.getElementById('deptSelect').value;
+            const task = document.getElementById('taskInput').value;
+            const person = document.getElementById('personInput').value;
+            const date = document.getElementById('dateInput').value;
+            const time = document.getElementById('timeSelect').value;
+            const location = document.getElementById('locationInput').value;
+            const selectedWeek = document.getElementById('weekSelect').value;
+
+            if (!dept || !task) {
+                alert('부서와 업무내용은 필수 입력 항목입니다.');
+                return;
+            }
+
+            if (!selectedWeek) {
+                alert('주차를 선택해주세요.');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                
+                const taskData = {
+                    week: selectedWeek,
+                    department: dept,
+                    task: task,
+                    person: person,
+                    date: date,
+                    time: time,
+                    location: location,
+                    checked: false
+                };
+
+                await saveDataToSheet(taskData);
+
+                // 입력 필드 초기화
+                document.getElementById('deptSelect').value = '';
+                document.getElementById('taskInput').value = '';
+                document.getElementById('personInput').value = '';
+                document.getElementById('dateInput').value = '';
+                document.getElementById('timeSelect').value = '';
+                document.getElementById('locationInput').value = '';
+
+                // 데이터 새로고침
+                await loadDataFromSheet();
+                showSuccessMessage('업무가 성공적으로 등록되었습니다!');
+                
+            } catch (error) {
+                console.error('업무 추가 오류:', error);
+                showErrorMessage('업무 등록 중 오류가 발생했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 업무 삭제
+        async function deleteTask(id) {
+            if (confirm('이 업무를 삭제하시겠습니까?')) {
+                try {
+                    setLoading(true);
+                    await deleteDataFromSheet(id);
+                    await loadDataFromSheet();
+                    showSuccessMessage('업무가 성공적으로 삭제되었습니다!');
+                } catch (error) {
+                    console.error('업무 삭제 오류:', error);
+                    showErrorMessage('업무 삭제 중 오류가 발생했습니다.');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
+
+        // 시간표 반영 토글
+        async function toggleTask(id, checked) {
+            try {
+                const task = allData.find(item => item.id === id);
+                if (!task) {
+                    console.error('Task not found:', id);
+                    return;
+                }
+
+                const updatedTask = {
+                    ...task,
+                    checked: checked
+                };
+
+                // 즉시 로컬 데이터 업데이트 (UI 반응성 향상)
+                const taskIndex = allData.findIndex(item => item.id === id);
+                if (taskIndex !== -1) {
+                    allData[taskIndex].checked = checked;
+                }
+
+                // Google Sheets 업데이트
+                await updateDataInSheet(id, updatedTask);
+                
+                // 현재 주차 데이터 다시 로드
+                const selectedWeek = document.getElementById('weekSelect').value;
+                if (selectedWeek) {
+                    loadWeekData(selectedWeek);
+                }
+                
+            } catch (error) {
+                console.error('체크박스 업데이트 오류:', error);
+                showErrorMessage('업데이트 중 오류가 발생했습니다.');
+                
+                // 오류 시 체크박스 원래 상태로 복원
+                const checkbox = document.querySelector(`input[onchange*="${id}"]`);
+                if (checkbox) {
+                    checkbox.checked = !checked;
+                }
+            }
+        }
+
+        // 시간표 테이블 생성
+        function generateScheduleTable() {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            timeSlots.forEach((timeSlot, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="time-header">${timeSlotLabels[index]}</td>
+                    <td class="schedule-cell" id="schedule-${index}-0"></td>
+                    <td class="schedule-cell" id="schedule-${index}-1"></td>
+                    <td class="schedule-cell" id="schedule-${index}-2"></td>
+                    <td class="schedule-cell" id="schedule-${index}-3"></td>
+                    <td class="schedule-cell" id="schedule-${index}-4"></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 시간표 표시 업데이트
+        function updateScheduleDisplay() {
+            // 모든 셀 초기화
+            for (let timeIndex = 0; timeIndex < timeSlots.length; timeIndex++) {
+                for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
+                    const cell = document.getElementById(`schedule-${timeIndex}-${dayIndex}`);
+                    if (cell) cell.innerHTML = '';
+                }
+            }
+
+            const selectedWeek = document.getElementById('weekSelect').value;
+            if (!selectedWeek) return;
+            
+            const weekDates = parseWeekDates(selectedWeek);
+
+            // 체크된 항목들 처리
+            currentWeekData.tasks.forEach((task) => {
+                if (task.checked && task.date && task.time) {
+                    // 날짜 형식 정규화
+                    let taskDate;
+                    if (task.date.includes('T')) {
+                        taskDate = new Date(task.date);
+                    } else {
+                        taskDate = new Date(task.date + 'T00:00:00');
+                    }
+                    
+                    const dayIndex = getDayIndex(taskDate, weekDates);
+                    const timeIndex = getTimeIndex(task.time);
+
+                    if (dayIndex >= 0 && timeIndex >= 0) {
+                        const cell = document.getElementById(`schedule-${timeIndex}-${dayIndex}`);
+                        if (cell) {
+                            const scheduleItem = document.createElement('div');
+                            scheduleItem.className = 'schedule-item';
+                            
+                            let itemHTML = `<div class="dept-name-schedule">${task.department}</div>`;
+                            itemHTML += `<div class="task-name-schedule">${task.task}</div>`;
+                            itemHTML += `<button class="schedule-delete-btn" onclick="deleteScheduleItem(${task.id})" title="삭제">×</button>`;
+                            
+                            scheduleItem.innerHTML = itemHTML;
+                            
+                            // 클릭 이벤트로 팝업 표시
+                            scheduleItem.onclick = function(e) {
+                                if (e.target.classList.contains('schedule-delete-btn')) {
+                                    return; // 삭제 버튼 클릭시 팝업 방지
+                                }
+                                showTaskModal(task);
+                            };
+                            
+                            cell.appendChild(scheduleItem);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 시간표에서 항목 삭제 (체크 해제)
+        async function deleteScheduleItem(id) {
+            if (confirm('이 일정을 시간표에서 제거하시겠습니까?')) {
+                try {
+                    await toggleTask(id, false);
+                    showSuccessMessage('일정이 시간표에서 제거되었습니다!');
+                } catch (error) {
+                    console.error('일정 제거 오류:', error);
+                    showErrorMessage('일정 제거 중 오류가 발생했습니다.');
+                }
+            }
+        }
+
+        function getDayIndex(date, weekDates) {
+            const startDate = new Date(weekDates.start);
+            const endDate = new Date(weekDates.end);
+            
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            date.setHours(12, 0, 0, 0);
+            
+            if (date >= startDate && date <= endDate) {
+                const dayOfWeek = date.getDay();
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    return dayOfWeek - 1;
+                }
+            }
+            return -1;
+        }
+
+        function getTimeIndex(timeStr) {
+            const timeMap = {
+                '조회': 0, '1교시': 1, '2교시': 2, '3교시': 3, '4교시': 4,
+                '점심': 5, '5교시': 6, '6교시': 7, '7교시': 8, '청소': 9
+            };
+            return timeMap[timeStr] !== undefined ? timeMap[timeStr] : -1;
+        }
+
+        // 성공 메시지 표시
+        function showSuccessMessage(message = '작업이 성공적으로 완료되었습니다!') {
+            const messageElement = document.getElementById('successMessage');
+            messageElement.textContent = `✅ ${message}`;
+            messageElement.style.display = 'block';
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // 에러 메시지 표시
+        function showErrorMessage(message = '오류가 발생했습니다.') {
+            const messageElement = document.getElementById('errorMessage');
+            messageElement.textContent = `❌ ${message}`;
+            messageElement.style.display = 'block';
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // 주기적으로 데이터 새로고침 (30초마다)
+        setInterval(async () => {
+            if (isOnline) {
+                try {
+                    await loadDataFromSheet();
+                } catch (error) {
+                    console.error('자동 새로고침 오류:', error);
+                    setOnlineStatus(false);
+                }
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

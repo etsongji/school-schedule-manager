@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주간 학교일정 조회</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 10px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(30, 58, 95, 0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #4a90c2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-indicator.online {
+            background: rgba(72, 187, 120, 0.2);
+            border-color: rgba(72, 187, 120, 0.5);
+            color: #e6fffa;
+        }
+
+        .status-indicator.offline {
+            background: rgba(229, 62, 62, 0.2);
+            border-color: rgba(229, 62, 62, 0.5);
+            color: #fed7d7;
+        }
+
+        .controls {
+            background: #f8fafc;
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .week-selector {
+            margin-bottom: 15px;
+        }
+
+        .week-selector label {
+            display: block;
+            font-weight: 600;
+            font-size: 1em;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .week-selector select {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .week-selector select:focus {
+            outline: none;
+            border-color: #4a90c2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.1);
+        }
+
+        .action-buttons {
+            margin-top: 10px;
+        }
+
+        .btn {
+            background: #4a90c2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #3a7ca8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 144, 194, 0.25);
+        }
+
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .main-content {
+            padding: 15px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .no-data h3 {
+            font-size: 1.4em;
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .current-week {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1em;
+            color: #1e3a5f;
+            font-weight: 600;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 4px 16px rgba(30, 58, 95, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            table-layout: fixed;
+        }
+
+        .schedule-table th {
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+        }
+
+        .date-header {
+            background: #4a90c2;
+            font-size: 12px;
+            width: 17.6%;
+        }
+
+        .day-header {
+            background: #1e3a5f;
+            font-size: 11px;
+            width: 17.6%;
+        }
+
+        .time-header {
+            background: #f0f7ff;
+            color: #1e3a5f !important;
+            font-weight: 600;
+            width: 12%;
+            font-size: 9px;
+            padding: 6px 2px;
+        }
+
+        .schedule-cell {
+            border: 1px solid #e2e8f0;
+            padding: 3px;
+            vertical-align: top;
+            height: 60px;
+            background: white;
+            position: relative;
+            width: 17.6%;
+            overflow: hidden;
+        }
+
+        .schedule-item {
+            background: #f0f7ff;
+            border-radius: 3px;
+            padding: 3px;
+            margin-bottom: 2px;
+            font-size: 9px;
+            line-height: 1.1;
+            box-shadow: 0 1px 2px rgba(30, 58, 95, 0.05);
+            border-left: 2px solid #4a90c2;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .schedule-item:hover {
+            background: #e6f3ff;
+            transform: scale(1.02);
+            box-shadow: 0 2px 4px rgba(30, 58, 95, 0.15);
+        }
+
+        .schedule-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .dept-name-schedule {
+            font-weight: 600;
+            color: #1e3a5f;
+            margin-bottom: 1px;
+            font-size: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-name-schedule {
+            color: #2d3748;
+            font-size: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .empty-cell {
+            color: #cbd5e0;
+            font-style: italic;
+            text-align: center;
+            padding: 15px 5px;
+            font-size: 10px;
+        }
+
+        .message {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .success-message {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #fc8181;
+        }
+
+        /* 모달 팝업 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.2s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            margin-top: -5px;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e3a5f;
+            margin: 0;
+        }
+
+        .modal-body {
+            line-height: 1.5;
+        }
+
+        .modal-info {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+            border-left: 3px solid #4a90c2;
+        }
+
+        .modal-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 13px;
+        }
+
+        .modal-value {
+            color: #2d3748;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .controls, .action-buttons, .status-indicator, .modal {
+                display: none;
+            }
+
+            .header {
+                background: #4a90c2 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            .schedule-table th {
+                background: #4a90c2 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            .date-header {
+                background: #4a90c2 !important;
+            }
+
+            .day-header {
+                background: #1e3a5f !important;
+            }
+
+            .schedule-item {
+                background: #f0f7ff !important;
+                border-left: 2px solid #4a90c2 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+                font-size: 13px;
+            }
+
+            .container {
+                border-radius: 8px;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.2em;
+            }
+
+            .status-indicator {
+                position: static;
+                margin: 8px auto 0;
+                display: block;
+                width: fit-content;
+            }
+
+            .main-content {
+                padding: 10px;
+            }
+
+            .current-week {
+                font-size: 0.9em;
+                margin-bottom: 15px;
+            }
+
+            .schedule-table th {
+                padding: 6px 2px;
+            }
+
+            .date-header {
+                font-size: 10px;
+            }
+
+            .day-header {
+                font-size: 9px;
+            }
+
+            .time-header {
+                font-size: 8px;
+                padding: 4px 1px;
+            }
+
+            .schedule-cell {
+                padding: 2px;
+                height: 50px;
+            }
+
+            .schedule-item {
+                font-size: 8px;
+                padding: 2px;
+                margin-bottom: 1px;
+            }
+
+            .dept-name-schedule {
+                font-size: 7px;
+            }
+
+            .task-name-schedule {
+                font-size: 7px;
+            }
+
+            .empty-cell {
+                font-size: 9px;
+                padding: 10px 3px;
+            }
+
+            .modal-content {
+                margin: 10% auto;
+                padding: 15px;
+                width: 95%;
+            }
+
+            .modal-title {
+                font-size: 15px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 8px 15px;
+                margin: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="status-indicator" id="statusIndicator">●</div>
+            <h1>📊 주간 학교일정 조회</h1>
+        </div>
+
+        <div class="controls">
+            <div class="week-selector">
+                <label for="weekSelect">📅 주차 선택</label>
+                <select id="weekSelect">
+                    <option value="">주차를 선택하세요...</option>
+                </select>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn" id="refreshBtn" onclick="refreshData()">🔄 새로고침</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="success-message message" id="successMessage">
+                ✅ 데이터를 성공적으로 불러왔습니다!
+            </div>
+            
+            <div class="error-message message" id="errorMessage">
+                ❌ 데이터 로드 중 오류가 발생했습니다.
+            </div>
+
+            <div id="noData" class="no-data">
+                <h3>📋 표시할 데이터가 없습니다</h3>
+                <p>주차를 선택하거나 메인 관리 시스템에서 일정을 등록해주세요.</p>
+            </div>
+
+            <div id="scheduleContent" style="display: none;">
+                <div class="current-week" id="currentWeekTitle"></div>
+                
+                <table class="schedule-table" id="scheduleTable">
+                    <thead>
+                        <tr id="dateRow">
+                            <th class="time-header">날짜</th>
+                            <th class="date-header">08/11</th>
+                            <th class="date-header">08/12</th>
+                            <th class="date-header">08/13</th>
+                            <th class="date-header">08/14</th>
+                            <th class="date-header">08/15</th>
+                        </tr>
+                        <tr>
+                            <th class="time-header">시간</th>
+                            <th class="day-header">월</th>
+                            <th class="day-header">화</th>
+                            <th class="day-header">수</th>
+                            <th class="day-header">목</th>
+                            <th class="day-header">금</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <!-- 동적으로 생성됨 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 팝업 -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2 class="modal-title" id="modalTitle">일정 상세 정보</h2>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 동적으로 생성됨 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzX0LiFfj539aDKWhTLlXivnLjZdAce6lhxZEEaK7et_rsp6L0MIAKVs_hPtdRkFipV/exec';
+        let allData = [];
+        let currentWeekData = {};
+        let isOnline = false;
+
+        const timeSlots = [
+            '조회 (08:30-08:40)', '1교시 (08:40-09:30)', '2교시 (09:40-10:30)',
+            '3교시 (10:40-11:30)', '4교시 (11:40-12:30)', '점심 (12:30-13:30)',
+            '5교시 (13:30-14:20)', '6교시 (14:30-15:20)', '7교시 (15:30-16:20)',
+            '청소 (16:20-16:40)'
+        ];
+
+        const timeSlotLabels = ['조회', '1교시', '2교시', '3교시', '4교시', '점심', '5교시', '6교시', '7교시', '청소'];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('페이지 초기화 시작');
+            generateWeekOptions();
+            setupEventListeners();
+            setupModalEvents();
+            loadDataFromSheet();
+        });
+
+        // 주차 옵션 생성 (직접 정의)
+        function generateWeekOptions() {
+            const select = document.getElementById('weekSelect');
+            console.log('주차 옵션 생성 시작');
+            
+            // 2025년 8월 11일부터 시작하는 주차들 직접 정의
+            const weekData = [
+                '08/11 ~ 08/15', '08/18 ~ 08/22', '08/25 ~ 08/29',
+                '09/01 ~ 09/05', '09/08 ~ 09/12', '09/15 ~ 09/19', '09/22 ~ 09/26', '09/29 ~ 10/03',
+                '10/06 ~ 10/10', '10/13 ~ 10/17', '10/20 ~ 10/24', '10/27 ~ 10/31',
+                '11/03 ~ 11/07', '11/10 ~ 11/14', '11/17 ~ 11/21', '11/24 ~ 11/28',
+                '12/01 ~ 12/05', '12/08 ~ 12/12', '12/15 ~ 12/19', '12/22 ~ 12/26', '12/29 ~ 01/02',
+                '01/05 ~ 01/09', '01/12 ~ 01/16', '01/19 ~ 01/23', '01/26 ~ 01/30',
+                '02/02 ~ 02/06', '02/09 ~ 02/13', '02/16 ~ 02/20', '02/23 ~ 02/27'
+            ];
+            
+            weekData.forEach((weekStr, index) => {
+                const option = document.createElement('option');
+                option.value = weekStr;
+                option.textContent = weekStr;
+                select.appendChild(option);
+                console.log(`주차 ${index + 1} 추가: ${weekStr}`);
+            });
+            
+            console.log(`총 ${weekData.length}개 주차 생성 완료`);
+            
+            // 주차 생성 후 현재 주차 자동 선택
+            setTimeout(() => {
+                setCurrentWeek();
+            }, 100);
+        }
+
+        // 오늘 날짜에 해당하는 주차 자동 선택
+        function setCurrentWeek() {
+            const today = new Date();
+            const weekSelect = document.getElementById('weekSelect');
+            
+            console.log('현재 날짜 기준 주차 찾기:', today.toLocaleDateString());
+            
+            // 모든 주차 옵션을 확인하여 오늘 날짜가 포함된 주차 찾기
+            for (let i = 1; i < weekSelect.options.length; i++) {
+                const weekOption = weekSelect.options[i];
+                const weekStr = weekOption.value;
+                
+                if (isDateInWeek(today, weekStr)) {
+                    console.log('현재 주차 찾음:', weekStr);
+                    weekSelect.value = weekStr;
+                    
+                    // 데이터가 로드되면 주차 데이터 표시
+                    if (allData.length > 0) {
+                        loadWeekSchedule(weekStr);
+                    }
+                    
+                    return;
+                }
+            }
+            
+            console.log('현재 날짜에 해당하는 주차를 찾을 수 없음');
+        }
+
+        // 특정 날짜가 주차에 포함되는지 확인
+        function isDateInWeek(date, weekStr) {
+            try {
+                const parts = weekStr.split(' ~ ');
+                const startStr = parts[0];
+                const endStr = parts[1];
+                
+                // 월/일 파싱
+                const [startMonth, startDay] = startStr.split('/').map(Number);
+                const [endMonth, endDay] = endStr.split('/').map(Number);
+                
+                // 현재 날짜의 월/일
+                const currentMonth = date.getMonth() + 1;
+                const currentDay = date.getDate();
+                
+                console.log('날짜 비교:', {
+                    weekStr,
+                    current: `${currentMonth}/${currentDay}`,
+                    start: `${startMonth}/${startDay}`,
+                    end: `${endMonth}/${endDay}`
+                });
+                
+                // 년도 경계를 고려한 비교
+                if (endMonth < startMonth) {
+                    // 년도가 바뀌는 경우 (12월 말 ~ 1월 초)
+                    return (currentMonth === startMonth && currentDay >= startDay) ||
+                           (currentMonth > startMonth) ||
+                           (currentMonth < startMonth && currentMonth === endMonth && currentDay <= endDay) ||
+                           (currentMonth < startMonth && currentMonth < endMonth);
+                } else {
+                    // 같은 년도 내의 경우
+                    return (currentMonth > startMonth || (currentMonth === startMonth && currentDay >= startDay)) &&
+                           (currentMonth < endMonth || (currentMonth === endMonth && currentDay <= endDay));
+                }
+                
+            } catch (error) {
+                console.error('날짜 비교 오류:', error);
+                return false;
+            }
+        }
+
+        async function loadDataFromSheet() {
+            try {
+                setLoading(true);
+                console.log('데이터 로드 시작:', API_URL);
+                
+                // 첫 번째 시도: 일반적인 fetch
+                let response;
+                let data;
+                
+                try {
+                    response = await fetch(`${API_URL}?action=getData&callback=?`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                        mode: 'cors'
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const responseText = await response.text();
+                    console.log('Raw response:', responseText.substring(0, 200));
+                    
+                    // JSON 파싱 시도
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        // JSONP 콜백이 있는 경우 처리
+                        const jsonMatch = responseText.match(/\((.*)\)/);
+                        if (jsonMatch) {
+                            data = JSON.parse(jsonMatch[1]);
+                        } else {
+                            throw parseError;
+                        }
+                    }
+                } catch (fetchError) {
+                    console.log('첫 번째 시도 실패, 두 번째 시도 중...', fetchError.message);
+                    
+                    // 두 번째 시도: 단순 GET
+                    response = await fetch(`${API_URL}?action=getData`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    data = await response.json();
+                }
+                
+                console.log('받은 데이터:', data);
+                
+                if (data && data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data || !Array.isArray(data)) {
+                    console.warn('데이터 형식 문제:', typeof data, data);
+                    allData = [];
+                    showErrorMessage('데이터 형식이 올바르지 않습니다.');
+                } else {
+                    allData = data;
+                    console.log('성공적으로 로드된 데이터 개수:', allData.length);
+                    showSuccessMessage(`${allData.length}개의 일정을 불러왔습니다!`);
+                }
+                
+                setOnlineStatus(true);
+                
+                const selectedWeek = document.getElementById('weekSelect').value;
+                if (selectedWeek) {
+                    loadWeekSchedule(selectedWeek);
+                } else {
+                    // 데이터 로드 완료 후 현재 주차 다시 시도
+                    setCurrentWeek();
+                }
+                
+            } catch (error) {
+                console.error('데이터 로드 오류 상세:', error);
+                setOnlineStatus(false);
+                showErrorMessage(`데이터 로드 실패: ${error.message}`);
+                
+                // 개발자를 위한 추가 정보
+                if (error.message.includes('CORS')) {
+                    showErrorMessage('CORS 오류 발생. Google Apps Script 설정을 확인해주세요.');
+                } else if (error.message.includes('NetworkError')) {
+                    showErrorMessage('네트워크 연결을 확인해주세요.');
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setOnlineStatus(online) {
+            isOnline = online;
+            const indicator = document.getElementById('statusIndicator');
+            
+            if (online) {
+                indicator.textContent = '●';
+                indicator.className = 'status-indicator online';
+                indicator.title = '온라인 - Google Sheets 연결됨';
+            } else {
+                indicator.textContent = '●';
+                indicator.className = 'status-indicator offline';
+                indicator.title = '오프라인 - 연결 실패';
+            }
+        }
+
+        function setLoading(loading) {
+            const container = document.querySelector('.container');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            if (loading) {
+                container.classList.add('loading');
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = '🔄 로딩중...';
+            } else {
+                container.classList.remove('loading');
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 새로고침';
+            }
+        }
+
+        function formatDate(date) {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}/${day}`;
+        }
+
+        function setupEventListeners() {
+            document.getElementById('weekSelect').addEventListener('change', function() {
+                const selectedWeek = this.value;
+                if (selectedWeek) {
+                    loadWeekSchedule(selectedWeek);
+                } else {
+                    showNoData();
+                }
+            });
+        }
+
+        function setupModalEvents() {
+            const modal = document.getElementById('scheduleModal');
+            const closeBtn = document.querySelector('.close');
+
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+
+        function showScheduleModal(task) {
+            const modal = document.getElementById('scheduleModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = task.task;
+
+            let bodyHTML = '';
+            
+            bodyHTML += `<div class="modal-info">
+                <div class="modal-label">부서/담당</div>
+                <div class="modal-value">${task.department}</div>
+            </div>`;
+
+            bodyHTML += `<div class="modal-info">
+                <div class="modal-label">부서/담당</div>
+                <div class="modal-value">${task.department}</div>
+            </div>`;
+
+            if (task.person) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">담당자</div>
+                    <div class="modal-value">${task.person}</div>
+                </div>`;
+            }
+
+            if (task.location) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">장소</div>
+                    <div class="modal-value">${task.location}</div>
+                </div>`;
+            }
+
+            bodyHTML += `<div class="modal-info">
+                <div class="modal-label">시간</div>
+                <div class="modal-value">${task.time}</div>
+            </div>`;
+
+            if (task.date) {
+                const taskDate = new Date(task.date);
+                const dateString = taskDate.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                });
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">날짜</div>
+                    <div class="modal-value">${dateString}</div>
+                </div>`;
+            }
+
+            if (task.description) {
+                bodyHTML += `<div class="modal-info">
+                    <div class="modal-label">상세 내용</div>
+                    <div class="modal-value">${task.description}</div>
+                </div>`;
+            }
+
+            modalBody.innerHTML = bodyHTML;
+            modal.style.display = 'block';
+        }
+
+        function loadWeekSchedule(weekStr) {
+            const weekTasks = allData.filter(item => item.week === weekStr && item.checked);
+            
+            if (weekTasks.length === 0) {
+                showNoData();
+                return;
+            }
+
+            currentWeekData = {
+                week: weekStr,
+                tasks: weekTasks
+            };
+
+            document.getElementById('currentWeekTitle').textContent = `📅 ${weekStr} 일정`;
+            updateDateHeaders(weekStr);
+            generateScheduleTable();
+            updateScheduleDisplay();
+            showScheduleContent();
+        }
+
+        function showNoData() {
+            document.getElementById('noData').style.display = 'block';
+            document.getElementById('scheduleContent').style.display = 'none';
+        }
+
+        function showScheduleContent() {
+            document.getElementById('noData').style.display = 'none';
+            document.getElementById('scheduleContent').style.display = 'block';
+        }
+
+        function updateDateHeaders(weekStr) {
+            const dates = parseWeekDates(weekStr);
+            const dateRow = document.getElementById('dateRow');
+            const dateCells = dateRow.querySelectorAll('.date-header');
+            
+            for (let i = 0; i < 5; i++) {
+                const date = new Date(dates.start);
+                date.setDate(dates.start.getDate() + i);
+                const dateStr = formatDate(date);
+                dateCells[i].textContent = dateStr;
+            }
+        }
+
+        function parseWeekDates(weekStr) {
+            try {
+                const parts = weekStr.split(' ~ ');
+                const startStr = parts[0];
+                const endStr = parts[1];
+                
+                const startMonth = parseInt(startStr.split('/')[0]);
+                const startDay = parseInt(startStr.split('/')[1]);
+                const endMonth = parseInt(endStr.split('/')[0]);
+                const endDay = parseInt(endStr.split('/')[1]);
+                
+                // 년도 계산: 8월부터 시작하므로 8월~12월은 2025년, 1월~7월은 2026년
+                const startYear = startMonth >= 8 ? 2025 : 2026;
+                const endYear = endMonth >= 8 ? 2025 : 2026;
+                
+                const startDate = new Date(startYear, startMonth - 1, startDay);
+                const endDate = new Date(endYear, endMonth - 1, endDay);
+                
+                return { start: startDate, end: endDate };
+            } catch (error) {
+                console.error('날짜 파싱 오류:', error, weekStr);
+                return { start: new Date(), end: new Date() };
+            }
+        }
+
+        function generateScheduleTable() {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            timeSlots.forEach((timeSlot, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="time-header">${timeSlotLabels[index]}</td>
+                    <td class="schedule-cell" id="schedule-${index}-0"></td>
+                    <td class="schedule-cell" id="schedule-${index}-1"></td>
+                    <td class="schedule-cell" id="schedule-${index}-2"></td>
+                    <td class="schedule-cell" id="schedule-${index}-3"></td>
+                    <td class="schedule-cell" id="schedule-${index}-4"></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateScheduleDisplay() {
+            for (let timeIndex = 0; timeIndex < timeSlots.length; timeIndex++) {
+                for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
+                    const cell = document.getElementById(`schedule-${timeIndex}-${dayIndex}`);
+                    if (cell) cell.innerHTML = '';
+                }
+            }
+
+            const selectedWeek = document.getElementById('weekSelect').value;
+            const weekDates = parseWeekDates(selectedWeek);
+
+            currentWeekData.tasks.forEach((task) => {
+                if (task.date && task.time) {
+                    let taskDate;
+                    if (task.date.includes('T')) {
+                        taskDate = new Date(task.date);
+                    } else {
+                        taskDate = new Date(task.date + 'T00:00:00');
+                    }
+                    
+                    const dayIndex = getDayIndex(taskDate, weekDates);
+                    const timeIndex = getTimeIndex(task.time);
+
+                    if (dayIndex >= 0 && timeIndex >= 0) {
+                        const cell = document.getElementById(`schedule-${timeIndex}-${dayIndex}`);
+                        if (cell) {
+                            const scheduleItem = document.createElement('div');
+                            scheduleItem.className = 'schedule-item';
+                            
+                            let itemHTML = `<div class="dept-name-schedule">${task.department}</div>`;
+                            itemHTML += `<div class="task-name-schedule">${task.task}</div>`;
+                            
+                            scheduleItem.innerHTML = itemHTML;
+                            
+                            // 클릭 이벤트 추가
+                            scheduleItem.onclick = function() {
+                                showScheduleModal(task);
+                            };
+                            
+                            cell.appendChild(scheduleItem);
+                        }
+                    }
+                }
+            });
+
+            for (let timeIndex = 0; timeIndex < timeSlots.length; timeIndex++) {
+                for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
+                    const cell = document.getElementById(`schedule-${timeIndex}-${dayIndex}`);
+                    if (cell && cell.children.length === 0) {
+                        cell.innerHTML = '<div class="empty-cell">-</div>';
+                    }
+                }
+            }
+        }
+
+        function getDayIndex(date, weekDates) {
+            const startDate = new Date(weekDates.start);
+            const endDate = new Date(weekDates.end);
+            
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            date.setHours(12, 0, 0, 0);
+            
+            if (date >= startDate && date <= endDate) {
+                const dayOfWeek = date.getDay();
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    return dayOfWeek - 1;
+                }
+            }
+            return -1;
+        }
+
+        function getTimeIndex(timeStr) {
+            const timeMap = {
+                '조회': 0, '1교시': 1, '2교시': 2, '3교시': 3, '4교시': 4,
+                '점심': 5, '5교시': 6, '6교시': 7, '7교시': 8, '청소': 9
+            };
+            return timeMap[timeStr] !== undefined ? timeMap[timeStr] : -1;
+        }
+
+        async function refreshData() {
+            console.log('새로고침 시작');
+            await loadDataFromSheet();
+            const selectedWeek = document.getElementById('weekSelect').value;
+            if (selectedWeek) {
+                loadWeekSchedule(selectedWeek);
+            }
+        }
+
+        function showSuccessMessage(message = '작업이 완료되었습니다!') {
+            const messageElement = document.getElementById('successMessage');
+            messageElement.textContent = `✅ ${message}`;
+            messageElement.style.display = 'block';
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+
+        function showErrorMessage(message = '오류가 발생했습니다.') {
+            const messageElement = document.getElementById('errorMessage');
+            messageElement.textContent = `❌ ${message}`;
+            messageElement.style.display = 'block';
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // 자동 새로고침
+        setInterval(async () => {
+            if (isOnline) {
+                try {
+                    await loadDataFromSheet();
+                    const selectedWeek = document.getElementById('weekSelect').value;
+                    if (selectedWeek) {
+                        loadWeekSchedule(selectedWeek);
+                    }
+                } catch (error) {
+                    console.error('자동 새로고침 오류:', error);
+                    setOnlineStatus(false);
+                }
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
